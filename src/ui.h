@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <initializer_list>
 #include <map>
 #include <memory>
@@ -281,6 +282,8 @@ class uilist // NOLINT(cata-xy)
          * @returns 'false' if entry does not exist / is not available with current filter.
          */
         bool set_selected( int sel );
+        /// Updates an entry's displayed hotkey and active dispatch mapping together.
+        auto set_entry_hotkey( std::size_t entry_index, int hotkey ) -> bool;
 
         void addentry( const std::string &str );
         void addentry( int r, bool e, int k, const std::string &str );
@@ -297,9 +300,13 @@ class uilist // NOLINT(cata-xy)
                            const std::string &desc = "" );
         void settext( const std::string &str );
 
-        auto add_category( const std::string &key, const std::string &name ) -> void;
-        auto set_category_filter( const
-                                  std::function<bool( const uilist_entry &, const std::string & )> &filter ) -> void;
+        auto set_categories(
+            std::vector<std::string> category_names,
+            std::function < auto( const uilist_entry &, std::size_t ) -> bool > filter,
+            std::size_t requested_category = 0 ) -> void;
+        auto enable_dynamic_categories() -> void;
+        auto refresh_category_filter() -> void;
+        auto get_current_category() const -> std::size_t;
 
         void reset();
 
@@ -319,6 +326,7 @@ class uilist // NOLINT(cata-xy)
     private:
         int scroll_amount_from_action( const std::string &action );
         void apply_scrollbar();
+        auto cycle_category( bool forward ) -> void;
         // This function assumes it's being called from `query` and should
         // not be made public.
         void inputfilter();
@@ -408,9 +416,10 @@ class uilist // NOLINT(cata-xy)
         std::unique_ptr<string_input_popup> filter_popup;
         std::string filter;
 
-        std::vector<std::pair<std::string, std::string>> categories;
-        std::function<bool( const uilist_entry &, const std::string & )> category_filter;
-        size_t current_category = 0;
+        std::vector<std::string> categories;
+        std::function < auto( const uilist_entry &, std::size_t ) -> bool > category_filter;
+        std::size_t current_category = 0;
+        bool dynamic_categories = false;
 
         int max_entry_len;
         int max_column_len;
@@ -444,5 +453,3 @@ class pointmenu_cb : public uilist_callback
         ~pointmenu_cb() override;
         void select( uilist *menu ) override;
 };
-
-
