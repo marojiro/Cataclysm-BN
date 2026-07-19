@@ -1764,13 +1764,11 @@ private:
     spell_selector_categories& categories;
     const spell_selector_category_names& category_names;
     const std::set<int>& reserved_invlets;
-    const std::string favorite_status_hint;
-    const std::string not_favorite_status_hint;
     const std::string ignore_distractions_hint;
     const std::string popup_distractions_hint;
     const std::string assign_hotkey_hint;
     const int assign_hotkey_hint_width;
-    auto draw_spell_info(const spell& sp, bool favorite, const uilist* menu) -> void;
+    auto draw_spell_info(const spell& sp, const uilist* menu) -> void;
     auto update_categories(
         uilist* menu, const spell_selector_category_id& requested_category, bool rebuild_topology)
         -> void;
@@ -1785,7 +1783,6 @@ public:
         spell_selector_categories& categories;
         const spell_selector_category_names& category_names;
         const std::set<int>& reserved_invlets;
-        std::string favorite_action_hint;
         std::string distraction_action_hint;
         std::string assign_hotkey_action_hint;
         bool casting_ignore = false;
@@ -1798,13 +1795,6 @@ public:
           categories(opts.categories),
           category_names(opts.category_names),
           reserved_invlets(opts.reserved_invlets),
-          favorite_status_hint(string_format(
-              pgettext("spell selector favorite status", "%1$s (toggle: %2$s)"),
-              pgettext("spell selector favorite status", "Favorite"), opts.favorite_action_hint)),
-          not_favorite_status_hint(string_format(
-              pgettext("spell selector favorite status", "%1$s (toggle: %2$s)"),
-              pgettext("spell selector favorite status", "Not favorite"),
-              opts.favorite_action_hint)),
           ignore_distractions_hint(
               string_format("[%s] %s", opts.distraction_action_hint, _("Ignore Distractions"))),
           popup_distractions_hint(
@@ -1895,8 +1885,7 @@ public:
         mvwprintz(menu->window, point(assign_hotkey_x, 0), c_yellow, assign_hotkey_hint);
         if (menu->selected >= 0 && static_cast<std::size_t>(menu->selected) < known_spells.size()
             && static_cast<std::size_t>(menu->selected) < categories.spells.size()) {
-            draw_spell_info(
-                *known_spells[menu->selected], categories.spells[menu->selected].favorite, menu);
+            draw_spell_info(*known_spells[menu->selected], menu);
         }
         wnoutrefresh(menu->window);
     }
@@ -2003,8 +1992,7 @@ static std::string enumerate_traits(const std::set<trait_id> st) {
 }
 
 
-auto spellcasting_callback::draw_spell_info(
-    const spell& sp, const bool favorite, const uilist* menu) -> void {
+auto spellcasting_callback::draw_spell_info(const spell& sp, const uilist* menu) -> void {
     const int h_offset = menu->w_width - menu->pad_right + 1;
     // includes spaces on either side for readability
     const int info_width = menu->pad_right - 4;
@@ -2026,10 +2014,6 @@ auto spellcasting_callback::draw_spell_info(
             ? spell_class->name()
             : string_format(pgettext("spell selector", "Unknown class (%s)"), spell_class.str());
     print_colored_text(w_menu, point(h_col1, line++), yellow, yellow, spell_class_name);
-
-    print_colored_text(
-        w_menu, point(h_col1, line++), gray, gray,
-        favorite ? favorite_status_hint : not_favorite_status_hint);
 
     line += fold_and_print(w_menu, point(h_col1, line), info_width, gray, sp.description());
 
@@ -2262,7 +2246,6 @@ int known_magic::select_spell(Character& guy) {
         .categories = categories,
         .category_names = category_names,
         .reserved_invlets = reserved_invlets,
-        .favorite_action_hint = spell_input_context.get_desc(toggle_favorite_action, 1),
         .distraction_action_hint = spell_input_context.get_desc(toggle_distractions_action, 1),
         .assign_hotkey_action_hint = spell_input_context.get_desc(assign_spell_hotkey_action, 1),
         .casting_ignore = casting_ignore,
